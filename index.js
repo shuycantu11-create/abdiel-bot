@@ -17,9 +17,10 @@ async function iniciarBot() {
         browser: ["Ubuntu", "Chrome", "20.0.04"] // Necesario para que simule una PC
     });
 
-    // LÓGICA PARA EL CÓDIGO DE TEXTO (PAIRING CODE)
+        // LÓGICA PARA EL CÓDIGO DE TEXTO (PAIRING CODE)
     if (!sock.authState.creds.registered) {
-        await delay(3000); // Esperamos a que el bot cargue bien
+        await delay(10000); // Espera 10 segundos a que la conexión sea completamente estable
+
         console.log('\n╔════════════════════════════════════════╗');
         console.log('║      📱 ABDIE-BOT: VINCULACIÓN         ║');
         console.log('╚════════════════════════════════════════╝\n');
