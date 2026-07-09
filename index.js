@@ -1,6 +1,7 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay } = require('@whiskeysockets/baileys');
 const readline = require('readline');
 const { Boom } = require('@hapi/boom');
+const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
 
@@ -10,17 +11,17 @@ const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 async function iniciarBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesion_auth');
 
-    // Forzamos una configuración limpia y compatible con navegadores de escritorio para el código
+    // Usamos pino para SILENCIAR por completo los logs raros de la pantalla
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        mobile: false, 
-        browser: ["Chromium", "Ubuntu", "20.04"]
+        logger: pino({ level: 'silent' }), 
+        browser: ["Chrome (Linux)", "Desktop", "10.0.0"]
     });
 
     if (!sock.authState.creds.registered) {
-        // Un tiempo prudente para asegurar el enlace del WebSocket
-        await delay(8000); 
+        // Espera de 6 segundos para estabilizar la conexión silenciosa
+        await delay(6000); 
         
         console.clear();
         console.log('\n╔════════════════════════════════════════╗');
@@ -31,14 +32,15 @@ async function iniciarBot() {
         const numeroLimpio = numeroTelefono.replace(/[^0-9]/g, '');
         
         try {
-            console.log('⏳ Solicitando código a los servidores de WhatsApp...');
+            console.log('⏳ Generando código de vinculación seguro...');
             const codigo = await sock.requestPairingCode(numeroLimpio);
             console.log('\n╔════════════════════════════════════════╗');
             console.log(`║      TU CÓDIGO ES:  ${codigo}        ║`);
             console.log('╚════════════════════════════════════════╝\n');
         } catch (error) {
-            console.error('\n❌ Error al generar el código:', error.message || error);
-            console.log('💡 Si vuelve a fallar, intenta ingresar el número SIN el "1" o usando Datos Móviles.');
+            console.log('\n❌ No se pudo generar el código. Reintentando de forma automática...');
+            await delay(3000);
+            iniciarBot();
         }
     }
 
@@ -56,10 +58,13 @@ async function iniciarBot() {
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'close') {
-            const deberiaReconectar = (lastDisconnect.error instanceof Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-            if (deberiaReconectar) iniciarBot();
+            const code = (lastDisconnect.error instanceof Boom)?.output?.statusCode;
+            // Si la conexión se cae, vuelve a intentar de forma inteligente
+            if (code !== DisconnectReason.loggedOut) {
+                iniciarBot();
+            }
         } else if (connection === 'open') {
-            console.log('🚀 [abdiel-bot] conectado con éxito.');
+            console.log('🚀 [abdiel-bot] ¡Conectado con éxito al WhatsApp!');
         }
     });
 
