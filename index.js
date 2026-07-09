@@ -10,18 +10,19 @@ const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 async function iniciarBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesion_auth');
 
+    // Forzamos una configuración limpia y compatible con navegadores de escritorio para el código
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        // Cambiamos a una máscara de navegador estándar y compatible
-        browser: ["Chrome (Linux)", "", ""] 
+        mobile: false, 
+        browser: ["Chromium", "Ubuntu", "20.04"]
     });
 
     if (!sock.authState.creds.registered) {
-        // Esperamos 12 segundos completos para asegurar estabilidad total
-        await delay(12000); 
+        // Un tiempo prudente para asegurar el enlace del WebSocket
+        await delay(8000); 
         
-        console.clear(); // Limpia los textos raros anteriores para que veas todo limpio
+        console.clear();
         console.log('\n╔════════════════════════════════════════╗');
         console.log('║      📱 ABDIE-BOT: VINCULACIÓN         ║');
         console.log('╚════════════════════════════════════════╝\n');
@@ -30,13 +31,14 @@ async function iniciarBot() {
         const numeroLimpio = numeroTelefono.replace(/[^0-9]/g, '');
         
         try {
+            console.log('⏳ Solicitando código a los servidores de WhatsApp...');
             const codigo = await sock.requestPairingCode(numeroLimpio);
             console.log('\n╔════════════════════════════════════════╗');
             console.log(`║      TU CÓDIGO ES:  ${codigo}        ║`);
             console.log('╚════════════════════════════════════════╝\n');
         } catch (error) {
-            console.error('❌ Error al generar el código:', error.message || error);
-            console.log('\n💡 Si el error persiste, intenta alternar entre tus datos móviles y Wi-Fi.');
+            console.error('\n❌ Error al generar el código:', error.message || error);
+            console.log('💡 Si vuelve a fallar, intenta ingresar el número SIN el "1" o usando Datos Móviles.');
         }
     }
 
